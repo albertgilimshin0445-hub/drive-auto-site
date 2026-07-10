@@ -1,9 +1,13 @@
 <?xml version="1.0" encoding="UTF-8"?>
 <urlset xmlns="http://www.sitemaps.org/schemas/sitemap/0.9">
-  <url>
-    <loc>https://albertgilimshin0445-hub.github.io/drive-auto-site/</loc>
-    <lastmod>2026-07-10</lastmod>
-    <changefreq>weekly</changefreq>
-    <priority>1.0</priority>
-  </url>
+  <url><loc>https://albertgilimshin0445-hub.github.io/drive-auto-site/</loc><lastmod>2026-07-10</lastmod><changefreq>weekly</changefreq><priority>1.0</priority></url>
+  <url><loc>https://albertgilimshin0445-hub.github.io/drive-auto-site/cars/bmw-x3.html</loc><lastmod>2026-07-10</lastmod><changefreq>weekly</changefreq><priority>0.8</priority></url>
+  <url><loc>https://albertgilimshin0445-hub.github.io/drive-auto-site/cars/bmw-x5.html</loc><lastmod>2026-07-10</lastmod><changefreq>weekly</changefreq><priority>0.8</priority></url>
+  <url><loc>https://albertgilimshin0445-hub.github.io/drive-auto-site/cars/bmw-5-series.html</loc><lastmod>2026-07-10</lastmod><changefreq>weekly</changefreq><priority>0.8</priority></url>
+  <url><loc>https://albertgilimshin0445-hub.github.io/drive-auto-site/cars/mercedes-e300.html</loc><lastmod>2026-07-10</lastmod><changefreq>weekly</changefreq><priority>0.8</priority></url>
+  <url><loc>https://albertgilimshin0445-hub.github.io/drive-auto-site/cars/mercedes-e450.html</loc><lastmod>2026-07-10</lastmod><changefreq>weekly</changefreq><priority>0.8</priority></url>
+  <url><loc>https://albertgilimshin0445-hub.github.io/drive-auto-site/cars/audi-a6.html</loc><lastmod>2026-07-10</lastmod><changefreq>weekly</changefreq><priority>0.8</priority></url>
+  <url><loc>https://albertgilimshin0445-hub.github.io/drive-auto-site/cars/audi-q7.html</loc><lastmod>2026-07-10</lastmod><changefreq>weekly</changefreq><priority>0.8</priority></url>
+  <url><loc>https://albertgilimshin0445-hub.github.io/drive-auto-site/cars/audi-q8.html</loc><lastmod>2026-07-10</lastmod><changefreq>weekly</changefreq><priority>0.8</priority></url>
+  <url><loc>https://albertgilimshin0445-hub.github.io/drive-auto-site/cars/porsche-panamera.html</loc><lastmod>2026-07-10</lastmod><changefreq>weekly</changefreq><priority>0.8</priority></url>
 </urlset>
