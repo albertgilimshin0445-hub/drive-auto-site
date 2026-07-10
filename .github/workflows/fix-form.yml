@@ -1,0 +1,51 @@
+name: Fix form submission
+
+on:
+  push:
+    branches: [main]
+    paths:
+      - .github/workflows/fix-form.yml
+  workflow_dispatch:
+
+permissions:
+  contents: write
+
+jobs:
+  patch-form:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v5
+      - name: Patch form to AJAX
+        shell: bash
+        run: |
+          python <<'PY'
+          from pathlib import Path
+          p = Path('index.html')
+          s = p.read_text(encoding='utf-8')
+
+          old_form = '''<form class="sell-form" action="https://formsubmit.co/Primer4424@mail.ru" method="POST" id="sellForm"><input type="hidden" name="_subject" value="Новая заявка с сайта DRIVE"><input type="hidden" name="_captcha" value="false"><input type="hidden" name="_template" value="table"><input type="hidden" name="_next" id="nextUrl"><h2>Расскажите об автомобиле</h2><label>Марка и модель<input name="Автомобиль" placeholder="Например, BMW X5" required></label><label>Год выпуска<input name="Год выпуска" type="number" min="1990" max="2027" placeholder="2021" required></label><label>Пробег, км<input name="Пробег" type="number" min="0" placeholder="35 000" required></label><label>Номер телефона<input name="Телефон" type="tel" placeholder="+7 (___) ___-__-__" required></label><button class="gold-btn" type="submit">Получить оценку →</button><p class="note" id="formNote">После первой заявки подтвердите адрес Primer4424@mail.ru в письме от FormSubmit.</p></form>'''
+
+          new_form = '''<form class="sell-form" action="https://formsubmit.co/primer4424@mail.ru" method="POST" id="sellForm"><input type="hidden" name="_subject" value="Новая заявка с сайта DRIVE"><input type="hidden" name="_captcha" value="false"><input type="hidden" name="_template" value="table"><input type="hidden" name="_url" id="formUrl" value="https://albertgilimshin0445-hub.github.io/drive-auto-site/"><input type="text" name="_honey" tabindex="-1" autocomplete="off" style="display:none"><h2>Расскажите об автомобиле</h2><label>Марка и модель<input name="Автомобиль" placeholder="Например, BMW X5" required></label><label>Год выпуска<input name="Год выпуска" type="number" min="1990" max="2027" placeholder="2021" required></label><label>Пробег, км<input name="Пробег" type="number" min="0" placeholder="35 000" required></label><label>Номер телефона<input name="Телефон" type="tel" placeholder="+7 (___) ___-__-__" required></label><button class="gold-btn" id="submitEstimate" type="submit">Получить оценку →</button><p class="note" id="formNote">Заявка будет отправлена на Primer4424@mail.ru.</p></form>'''
+
+          old_js = "const nextUrl=document.getElementById('nextUrl'),formNote=document.getElementById('formNote');nextUrl.value=location.protocol.startsWith('http')?location.origin+location.pathname+'?sent=1#sell':'';if(new URLSearchParams(location.search).get('sent')==='1'){formNote.textContent='Заявка отправлена. Мы свяжемся с вами.';formNote.className='note success'}"
+
+          new_js = "const sellForm=document.getElementById('sellForm'),formNote=document.getElementById('formNote'),submitEstimate=document.getElementById('submitEstimate'),formUrl=document.getElementById('formUrl');if(location.protocol.startsWith('http'))formUrl.value=location.origin+location.pathname;sellForm.addEventListener('submit',async e=>{e.preventDefault();if(!sellForm.reportValidity())return;const originalText=submitEstimate.textContent;submitEstimate.disabled=true;submitEstimate.textContent='Отправляем…';formNote.textContent='Отправляем заявку…';formNote.className='note';try{const data=new FormData(sellForm);const response=await fetch('https://formsubmit.co/ajax/primer4424@mail.ru',{method:'POST',headers:{Accept:'application/json'},body:data});let result={};try{result=await response.json()}catch(_){}if(!response.ok||result.success===false||result.success==='false')throw new Error(result.message||'Сервис не принял заявку');formNote.textContent='Заявка принята. Если это первая заявка, откройте письмо от FormSubmit на Primer4424@mail.ru и подтвердите форму — после этого придут все заявки.';formNote.className='note success';sellForm.reset()}catch(error){formNote.textContent='Не удалось отправить заявку: '+(error.message||'проверьте интернет и попробуйте ещё раз')+'.';formNote.className='note error'}finally{submitEstimate.disabled=false;submitEstimate.textContent=originalText}})"
+
+          if old_form not in s:
+              raise SystemExit('Old form block not found')
+          if old_js not in s:
+              raise SystemExit('Old form script not found')
+
+          s = s.replace(old_form, new_form)
+          s = s.replace('.note{font-size:11px;margin-top:14px}.success{color:#237a3b}', '.note{font-size:11px;margin-top:14px;min-height:18px}.success{color:#237a3b}.error{color:#b12b2b}.gold-btn:disabled{opacity:.65;cursor:wait}')
+          s = s.replace(old_js, new_js)
+          p.write_text(s, encoding='utf-8')
+          PY
+      - name: Commit fix
+        shell: bash
+        run: |
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git add index.html
+          git commit -m "Fix estimate form submission"
+          git push
