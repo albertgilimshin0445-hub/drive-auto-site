@@ -1,0 +1,4 @@
+User-agent: *
+Allow: /
+
+Sitemap: https://albertgilimshin0445-hub.github.io/drive-auto-site/sitemap.xml
