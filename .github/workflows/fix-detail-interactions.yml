@@ -1,0 +1,165 @@
+name: Fix detail page interactions
+
+on:
+  push:
+    branches: [main]
+    paths:
+      - '.github/workflows/fix-detail-interactions.yml'
+  workflow_dispatch:
+
+permissions:
+  contents: write
+
+jobs:
+  patch-details:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - name: Fix galleries, colors and source labels
+        run: |
+          python - <<'PY'
+          from pathlib import Path
+          import re
+
+          pages = sorted(Path('cars').glob('*.html'))
+          if not pages:
+              raise SystemExit('No detail pages found in cars/')
+
+          marker_start = '<!-- detail-interactions-v2 -->'
+          marker_end = '<!-- /detail-interactions-v2 -->'
+
+          enhancement = r'''<!-- detail-interactions-v2 -->
+          <style>
+          .thumb{cursor:pointer}
+          .thumb:focus-visible,.swatch:focus-visible{outline:2px solid var(--gold);outline-offset:3px}
+          .gallery-meta{justify-content:flex-start!important}
+          .gallery-card img{cursor:pointer}
+          </style>
+          <script>
+          document.addEventListener('DOMContentLoaded',function(){
+            const mainImage=document.getElementById('mainImage');
+            const preview=document.getElementById('paintPreview');
+            const colorName=document.getElementById('colorName');
+            const offer=document.getElementById('offerLink');
+            const pageTitle=(document.querySelector('h1')||{}).textContent||'автомобиль';
+            const priceText=(document.querySelector('.price')||{}).textContent||'';
+
+            function selectImage(button){
+              if(!button||!mainImage)return;
+              const image=button.querySelector('img');
+              const src=button.dataset.src||(image&&image.src);
+              if(!src)return;
+              mainImage.src=src;
+              if(image&&image.alt)mainImage.alt=image.alt;
+              document.querySelectorAll('.thumb').forEach(function(item){
+                item.classList.remove('active');
+                item.setAttribute('aria-pressed','false');
+              });
+              button.classList.add('active');
+              button.setAttribute('aria-pressed','true');
+            }
+
+            document.querySelectorAll('.thumb').forEach(function(button,index){
+              button.setAttribute('aria-pressed',index===0?'true':'false');
+              button.addEventListener('click',function(event){
+                event.preventDefault();
+                selectImage(button);
+              });
+            });
+
+            document.querySelectorAll('.gallery-card img').forEach(function(image){
+              image.addEventListener('click',function(){
+                if(mainImage){
+                  mainImage.src=image.src;
+                  mainImage.alt=image.alt||mainImage.alt;
+                  document.querySelectorAll('.thumb').forEach(function(item){
+                    item.classList.toggle('active',(item.dataset.src||'')===image.src);
+                    item.setAttribute('aria-pressed',item.classList.contains('active')?'true':'false');
+                  });
+                  if(preview)preview.scrollIntoView({behavior:'smooth',block:'center'});
+                }
+              });
+            });
+
+            document.querySelectorAll('.swatch').forEach(function(button,index){
+              button.setAttribute('aria-pressed',index===0?'true':'false');
+              button.addEventListener('click',function(event){
+                event.preventDefault();
+                document.querySelectorAll('.swatch').forEach(function(item){
+                  item.classList.remove('active');
+                  item.setAttribute('aria-pressed','false');
+                });
+                button.classList.add('active');
+                button.setAttribute('aria-pressed','true');
+                const color=button.dataset.color||button.getAttribute('aria-label')||'Выбранный цвет';
+                const hex=button.dataset.hex||getComputedStyle(button).backgroundColor;
+                if(preview&&hex)preview.style.setProperty('--paint',hex);
+                if(colorName)colorName.textContent=color;
+                if(offer){
+                  offer.href='mailto:Primer4424@mail.ru?subject='+encodeURIComponent('Заявка на '+pageTitle)+'&body='+encodeURIComponent('Автомобиль: '+pageTitle+'\nЦвет: '+color+'\nЦена: '+priceText.trim());
+                }
+              });
+            });
+          });
+          </script>
+          <!-- /detail-interactions-v2 -->'''
+
+          changed = []
+          for path in pages:
+              text = path.read_text(encoding='utf-8')
+
+              # Remove an older copy of this enhancement before re-applying it.
+              text = re.sub(
+                  re.escape(marker_start) + r'.*?' + re.escape(marker_end),
+                  '',
+                  text,
+                  flags=re.S,
+              )
+
+              # Keep only the photo caption below gallery images. Remove source links
+              # and any remaining labels saying Source/Sources.
+              def clean_gallery_meta(match):
+                  inner = match.group(1)
+                  inner = re.sub(r'<a\b[^>]*>.*?</a>', '', inner, flags=re.S|re.I)
+                  inner = re.sub(r'<(?:span|small)\b[^>]*>\s*(?:Источник|Источники|Source|Sources).*?</(?:span|small)>', '', inner, flags=re.S|re.I)
+                  inner = re.sub(r'\s*(?:Источник|Источники|Source|Sources)\s*:?', '', inner, flags=re.I)
+                  inner = re.sub(r'\s{2,}', ' ', inner).strip()
+                  return '<div class="gallery-meta">' + inner + '</div>'
+
+              text = re.sub(
+                  r'<div class="gallery-meta">(.*?)</div>',
+                  clean_gallery_meta,
+                  text,
+                  flags=re.S|re.I,
+              )
+
+              # Remove standalone source labels placed immediately under gallery photos.
+              text = re.sub(r'<p\b[^>]*class="[^"]*(?:source|photo-source)[^"]*"[^>]*>.*?</p>', '', text, flags=re.S|re.I)
+
+              if '</body>' not in text:
+                  raise RuntimeError(f'Missing </body> in {path}')
+              text = text.replace('</body>', enhancement + '</body>', 1)
+
+              # Basic checks for the requested behavior.
+              assert "mainImage.src=src" in text
+              assert "preview.style.setProperty('--paint',hex)" in text
+              assert 'aria-pressed' in text
+              assert not re.search(r'<div class="gallery-meta">.*?<a\b', text, flags=re.S|re.I)
+
+              path.write_text(text, encoding='utf-8')
+              changed.append(str(path))
+
+          print('Updated detail pages:')
+          print('\n'.join(changed))
+          PY
+      - name: Commit changes
+        run: |
+          if git diff --quiet; then
+            echo "No changes needed"
+            exit 0
+          fi
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git add cars/*.html
+          git commit -m "Fix detail image and color selection"
+          git push
