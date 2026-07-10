@@ -1,0 +1,71 @@
+name: Add SEO metadata
+
+on:
+  push:
+    branches: [main]
+    paths:
+      - '.github/workflows/add-seo.yml'
+  workflow_dispatch:
+
+permissions:
+  contents: write
+
+jobs:
+  seo:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - name: Add search metadata
+        run: |
+          python - <<'PY'
+          from pathlib import Path
+
+          path = Path('index.html')
+          text = path.read_text(encoding='utf-8')
+
+          text = text.replace(
+              '<title>DRIVE — автомобили в Алматы</title>',
+              '<title>DRIVE — купить и продать автомобиль в Алматы</title>',
+              1,
+          )
+          text = text.replace(
+              '<meta name="description" content="Проверенные премиальные автомобили. Покупка, продажа и кредитование.">',
+              '<meta name="description" content="DRIVE — проверенные автомобили в Алматы. Покупка, продажа и бесплатная оценка автомобиля, автокредит и прозрачная история машин.">',
+              1,
+          )
+
+          marker = '<!-- drive-seo-v1 -->'
+          if marker not in text:
+              anchor = '<meta name="description" content="DRIVE — проверенные автомобили в Алматы. Покупка, продажа и бесплатная оценка автомобиля, автокредит и прозрачная история машин.">'
+              seo = '''<!-- drive-seo-v1 -->
+<meta name="robots" content="index,follow,max-image-preview:large">
+<link rel="canonical" href="https://albertgilimshin0445-hub.github.io/drive-auto-site/">
+<meta property="og:type" content="website">
+<meta property="og:locale" content="ru_RU">
+<meta property="og:site_name" content="DRIVE">
+<meta property="og:title" content="DRIVE — купить и продать автомобиль в Алматы">
+<meta property="og:description" content="Проверенные автомобили, бесплатная оценка, продажа и кредитование в Алматы.">
+<meta property="og:url" content="https://albertgilimshin0445-hub.github.io/drive-auto-site/">
+<meta property="og:image" content="https://drive-auto.tender-mochi-3238.chatgpt.site/hero-onyx-production.webp">
+<meta name="twitter:card" content="summary_large_image">
+<meta name="twitter:title" content="DRIVE — автомобили в Алматы">
+<meta name="twitter:description" content="Проверенные автомобили, бесплатная оценка, продажа и кредитование.">
+<meta name="twitter:image" content="https://drive-auto.tender-mochi-3238.chatgpt.site/hero-onyx-production.webp">
+<script type="application/ld+json">{"@context":"https://schema.org","@type":"WebSite","name":"DRIVE","url":"https://albertgilimshin0445-hub.github.io/drive-auto-site/","inLanguage":"ru","description":"Проверенные автомобили, покупка, продажа, оценка и кредитование в Алматы.","publisher":{"@type":"Organization","name":"DRIVE","email":"Primer4424@mail.ru","url":"https://albertgilimshin0445-hub.github.io/drive-auto-site/"}}</script>'''
+              text = text.replace(anchor, anchor + seo, 1)
+
+          assert '<meta name="robots" content="index,follow,max-image-preview:large">' in text
+          assert '<link rel="canonical" href="https://albertgilimshin0445-hub.github.io/drive-auto-site/">' in text
+          path.write_text(text, encoding='utf-8')
+          PY
+      - name: Commit SEO changes
+        run: |
+          if git diff --quiet; then
+            echo "No changes needed"
+            exit 0
+          fi
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git add index.html
+          git commit -m "Add SEO metadata for search indexing"
+          git push
