@@ -1,0 +1,51 @@
+name: Fix form submission
+
+on:
+  push:
+    paths:
+      - '.github/workflows/fix-form-submit.yml'
+  workflow_dispatch:
+
+permissions:
+  contents: write
+
+jobs:
+  fix:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v5
+      - name: Replace AJAX form with native POST
+        shell: bash
+        run: |
+          python - <<'PY'
+          from pathlib import Path
+          p = Path('index.html')
+          s = p.read_text(encoding='utf-8')
+
+          old_hidden = '<input type="hidden" name="_template" value="table"><input type="hidden" name="_url" id="formUrl" value="https://albertgilimshin0445-hub.github.io/drive-auto-site/">'
+          new_hidden = '<input type="hidden" name="_template" value="table"><input type="hidden" name="_next" value="https://albertgilimshin0445-hub.github.io/drive-auto-site/thanks.html"><input type="hidden" name="_autoresponse" value="Спасибо за заявку! Мы получили данные вашего автомобиля и скоро свяжемся с вами.">'
+          s = s.replace(old_hidden, new_hidden)
+
+          s = s.replace(",formUrl=document.getElementById('formUrl');if(location.protocol.startsWith('http'))formUrl.value=location.origin+location.pathname;", ";")
+
+          start = s.find("sellForm.addEventListener('submit',async e=>")
+          end_marker = "})();</script></body></html>"
+          end = s.find(end_marker, start)
+          if start == -1 or end == -1:
+              raise SystemExit('AJAX submit handler not found')
+          native = "sellForm.addEventListener('submit',()=>{if(!sellForm.reportValidity())return;submitEstimate.disabled=true;submitEstimate.textContent='Отправляем…';formNote.textContent='Перенаправляем на безопасную отправку заявки…';formNote.className='note'});"
+          s = s[:start] + native + s[end:]
+          s = s.replace('Заявка будет отправлена на Primer4424@mail.ru. Данные используются только для связи по вашей заявке.', 'Заявка отправится на Primer4424@mail.ru. При первой заявке подтвердите адрес в письме от FormSubmit.')
+          p.write_text(s, encoding='utf-8')
+
+          thanks = '''<!doctype html><html lang="ru"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><meta name="theme-color" content="#090909"><title>Заявка отправлена — DRIVE</title><style>*{box-sizing:border-box}body{margin:0;min-height:100vh;display:grid;place-items:center;padding:24px;background:#090909;color:#f5f2ec;font-family:Arial,sans-serif}.card{width:min(620px,100%);padding:48px;border:1px solid #ffffff20;background:#111;text-align:center}.mark{width:64px;height:64px;margin:0 auto 24px;border:1px solid #c3a36a;border-radius:50%;display:grid;place-items:center;color:#dfc38f;font-size:30px}h1{font-size:clamp(34px,6vw,54px);font-weight:400;margin:0 0 18px}p{color:#aaa59d;line-height:1.65;margin:0 auto 24px;max-width:500px}.notice{padding:14px;border:1px solid #c3a36a55;background:#c3a36a12;color:#dfc38f;font-size:13px;margin-bottom:28px}a{display:inline-block;padding:15px 24px;background:#c3a36a;color:#111;text-decoration:none;font-weight:700}@media(max-width:600px){.card{padding:34px 22px}}</style></head><body><main class="card"><div class="mark">✓</div><h1>Заявка отправлена</h1><p>Спасибо! Данные автомобиля переданы. Мы свяжемся с вами по указанному номеру телефона.</p><div class="notice">Если это первая заявка, откройте письмо от FormSubmit на Primer4424@mail.ru и нажмите подтверждение. После активации все заявки будут приходить на почту.</div><a href="./">Вернуться на сайт</a></main></body></html>'''
+          Path('thanks.html').write_text(thanks, encoding='utf-8')
+          PY
+      - name: Commit fix
+        shell: bash
+        run: |
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git add index.html thanks.html
+          git diff --cached --quiet || git commit -m "Use native form POST and add success page"
+          git push
